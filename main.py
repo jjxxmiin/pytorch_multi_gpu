@@ -16,12 +16,10 @@ def cleanup():
 
 
 def main():
-
-    ####################################################################################
     n_gpus = torch.cuda.device_count()
 
     torch.multiprocessing.spawn(main_worker, nprocs=n_gpus, args=(n_gpus, ))
-    ####################################################################################
+    
 
 def main_worker(gpu, n_gpus):
 
@@ -36,7 +34,6 @@ def main_worker(gpu, n_gpus):
     
     train_datasets = [YOUR DATASETS]
     valid_datasets = [YOUR DATASETS]
-    
     
     optimizer = [YOUR OPTIMIZER]
     criterion = [YOUR CRITERION]
