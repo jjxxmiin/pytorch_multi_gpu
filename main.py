@@ -1,4 +1,5 @@
 import torch
+import torch.distributed as dist
 
 
 def setup(rank, world_size):
@@ -27,9 +28,20 @@ def main_worker(gpu, n_gpus):
     image_size = 224
     batch_size = 512
     num_worker = 8
+    
     load_path = [YOUR CHECKPOINT]
     epochs = [YOUR OPTIMIZER]
-
+    
+    model = [YOUR MODEL]
+    
+    train_datasets = [YOUR DATASETS]
+    valid_datasets = [YOUR DATASETS]
+    
+    
+    optimizer = [YOUR OPTIMIZER]
+    criterion = [YOUR CRITERION]
+    scheduler = [YOUR SCHEDULER]
+    
     ####################################################################################
     ################################### Init Process ###################################
     ####################################################################################
@@ -41,9 +53,6 @@ def main_worker(gpu, n_gpus):
             init_method='tcp://127.0.0.1:3456',
             world_size=n_gpus,
             rank=gpu)
-    ####################################################################################
-
-    model = [YOUR MODEL]
 
     ####################################################################################
     #################################### Init Model ####################################
@@ -51,7 +60,6 @@ def main_worker(gpu, n_gpus):
     torch.cuda.set_device(gpu)
     model = model.cuda(gpu)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
-    ####################################################################################
     
     ####################################################################################
     #################################### Load Model ####################################
@@ -60,10 +68,6 @@ def main_worker(gpu, n_gpus):
     if load_path is not None:
         map_location = {'cuda:%d' % 0: 'cuda:%d' % gpu}
         model.load_state_dict(torch.load(load_path, map_location=map_location))
-    ####################################################################################
-
-    train_datasets = [YOUR DATASETS]
-    valid_datasets = [YOUR DATASETS]
     
     ####################################################################################
     ################################### Init Sampler ###################################
@@ -73,10 +77,6 @@ def main_worker(gpu, n_gpus):
     
     valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_datasets)
     valid_loader = torch.utils.data.DataLoader(... , shuffle=False, sampler=valid_sampler)
-    ####################################################################################
-
-    optimizer = [YOUR OPTIMIZER]
-    criterion = [YOUR CRITERION]
 
     ####################################################################################
     ##################################### Trainer ######################################
@@ -85,13 +85,11 @@ def main_worker(gpu, n_gpus):
         train_loss = train()
         valid_loss = valid()
         
-        ################################################################################
-        #################################### Save Model ################################
-        ################################################################################
+        scheduler.step()
+        
         if gpu == 0:
             if min_loss > valid_loss:
                 save()
-
-   ######################################################################################
+                
 if __name__ == "__main__":
   main()
