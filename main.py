@@ -2,6 +2,34 @@ import torch
 import torch.distributed as dist
 
 
+def train(..., scaler):
+    for inputs, labels in train_loader:
+        # ...
+        
+        # automatic mixed precision
+        with torch.cuda.amp.autocast():
+            pred = model(inputs)
+            loss = criterion(pred, labels)
+            
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+        
+        # ...
+
+        
+def valid(..., scaler):
+    for inputs, labels in train_loader:
+        # ...
+        
+        with torch.no_grad():
+            # with torch.cuda.amp.autocast():
+            pred = model(inputs)
+            loss = criterion(pred, labels)
+
+        # ...
+        
+        
 def setup(rank, world_size):
     # initialize the process group
     dist.init_process_group(
@@ -26,6 +54,9 @@ def main_worker(gpu, n_gpus):
     image_size = 224
     batch_size = 512
     num_worker = 8
+    
+    batch_size = int(batch_size / n_gpus)
+    num_worker = int(num_worker / n_gpus)
     
     load_path = [YOUR CHECKPOINT]
     epochs = [YOUR OPTIMIZER]
@@ -67,13 +98,24 @@ def main_worker(gpu, n_gpus):
         model.load_state_dict(torch.load(load_path, map_location=map_location))
     
     ####################################################################################
-    ################################### Init Sampler ###################################
+    ################################### Init Loader ####################################
     ####################################################################################
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_datasets)
-    train_loader = torch.utils.data.DataLoader(... , shuffle=False, sampler=train_sampler)
-    
     valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_datasets)
-    valid_loader = torch.utils.data.DataLoader(... , shuffle=False, sampler=valid_sampler)
+    
+    train_loader = torch.utils.data.DataLoader(train_dataset, 
+                                               batch_size=batch_size,
+                                               num_workers=num_workers, 
+                                               shuffle=False, 
+                                               pin_memory=True, 
+                                               sampler=train_sampler)
+    
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, 
+                                               batch_size=batch_size,
+                                               num_workers=num_workers, 
+                                               shuffle=False, 
+                                               pin_memory=True, 
+                                               sampler=valid_sampler)
 
     ####################################################################################
     ##################################### Trainer ######################################
