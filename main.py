@@ -62,11 +62,17 @@ def main_worker(gpu, n_gpus):
         model.load_state_dict(torch.load(load_path, map_location=map_location))
     ####################################################################################
 
+    train_datasets = [YOUR DATASETS]
+    valid_datasets = [YOUR DATASETS]
+    
     ####################################################################################
     ################################### Init Sampler ###################################
     ####################################################################################
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_datasets)
     train_loader = torch.utils.data.DataLoader(... , shuffle=False, sampler=train_sampler)
+    
+    valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_datasets)
+    valid_loader = torch.utils.data.DataLoader(... , shuffle=False, sampler=valid_sampler)
     ####################################################################################
 
     optimizer = [YOUR OPTIMIZER]
@@ -76,14 +82,16 @@ def main_worker(gpu, n_gpus):
     ##################################### Trainer ######################################
     ####################################################################################
     for epoch in range(epochs):
-        train()
-        valid()
+        train_loss = train()
+        valid_loss = valid()
         
-        ####################################################################################
-        #################################### Save Model ####################################
-        ####################################################################################
+        ################################################################################
+        #################################### Save Model ################################
+        ################################################################################
         if gpu == 0:
-          save()
+            if min_loss > valid_loss:
+                save()
 
+   ######################################################################################
 if __name__ == "__main__":
   main()
